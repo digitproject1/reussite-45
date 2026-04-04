@@ -21,40 +21,38 @@ function cn(...inputs) {
 // --- CONFIGURATION INSFORGE ---
 const insforge = createClient({
   baseUrl: 'https://5papp5aj.eu-central.insforge.app',
-  anonKey: import.meta.env.VITE_INSFORGE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3OC0xMjM0LTU2NzgtOTBhYi1jZGVmMTIzNDU2NzgiLCJlbWFpbCI6ImFub25AaW5zZm9yZ2UuY29tIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzNDUwNDR9.HlrQ3klD2Kk0AkfipDR30dw5lVExLni76cS_p3LAL68'
+  anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3OC0xMjM0LTU2NzgtOTBhYi1jZGVmMTIzNDU2NzgiLCJlbWFpbCI6ImFub25AaW5zZm9yZ2UuY29tIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzNDUwNDR9.HlrQ3klD2Kk0AkfipDR30dw5lVExLni76cS_p3LAL68'
 });
 
 const YOUTUBE_API_KEY = import.meta.env.VITE_YOUTUBE_API_KEY;
 
-const fetchInvidiousVideos = async (query) => {
-  // Liste d'instances Invidious robustes (2024)
+const fetchPipedVideos = async (query) => {
+  // Liste d'instances Piped API (100% CORS-friendly) pour contourner le blocage Invidious
   const instances = [
-    'https://inv.vern.cc/api/v1/search',
-    'https://invidious.projectsegfau.lt/api/v1/search',
-    'https://invidious.namazso.eu/api/v1/search',
-    'https://invidious.tiuxo.com/api/v1/search'
+    'https://pipedapi.kavin.rocks',
+    'https://pipedapi.syncpundit.io',
+    'https://pipedapi-libre.kavin.rocks'
   ];
   
   for (const inst of instances) {
     try {
-      // 🛡️ PROXY CORS BYPASS : allorigins force le passage à travers la sécurité CORS
-      const targetUrl = `${inst}?q=${encodeURIComponent(query)}&region=FR`;
-      const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`;
-      
-      const res = await fetch(proxyUrl);
-      const wrapper = await res.json();
-      
-      if (wrapper.contents) {
-        const data = JSON.parse(wrapper.contents);
-        if (data && data.length > 0) {
-          return data.slice(0, 3).map(v => ({
-            ytId: v.videoId,
-            title: v.title,
-            thumbnail: v.videoThumbnails?.[0]?.url || ""
-          }));
+      const res = await fetch(`${inst}/search?q=${encodeURIComponent(query + ' cours complet tutoriel long')}&filter=all`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.items) {
+          return data.items
+            .filter(v => v.type === 'stream' && v.duration > 240) // only videos > 4min
+            .slice(0, 3)
+            .map(v => ({
+              ytId: v.url.split('?v=')[1],
+              title: v.title,
+              thumbnail: v.thumbnail || ""
+            }));
         }
       }
-    } catch (e) { console.warn(`Instance ${inst} indisponible via proxy, passage à la suivante...`); }
+    } catch (e) {
+      console.warn(`Instance Piped API ${inst} indisponible, passage à la suivante...`);
+    }
   }
   return [];
 };
@@ -72,9 +70,9 @@ const fetchYouTubeVideos = async (query, originalSkill) => {
     let searchData = await searchRes.json();
     
     if (searchData.error || !searchData.items?.length) {
-       // Invidious en secours (sans filtre de durée strict mais avec mots-clés)
-       const invidiousResults = await fetchInvidiousVideos(`${query} cours complet tutoriel long`);
-       if (invidiousResults.length > 0) return invidiousResults;
+       // Piped API en secours (sans filtre de durée strict mais avec mots-clés)
+       const pipedResults = await fetchPipedVideos(`${query} cours complet tutoriel long`);
+       if (pipedResults.length > 0) return pipedResults;
        if (!searchData.error) {
            const fallbackRes = await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=8&q=${encodeURIComponent(query)}&type=video&videoEmbeddable=true&videoDuration=medium&key=${apiKey}`);
            searchData = await fallbackRes.json();
@@ -98,7 +96,7 @@ const fetchYouTubeVideos = async (query, originalSkill) => {
          return skillTokens.some(token => token.length > 2 && title.includes(token)) || title.includes((originalSkill || "").toLowerCase());
       })
       .map(v => ({ ytId: v.id, title: v.snippet.title, thumbnail: v.snippet.thumbnails.high.url }));
-  } catch (err) { return await fetchInvidiousVideos(query); }
+  } catch (err) { return await fetchPipedVideos(query); }
 };
 
 const App = () => {
