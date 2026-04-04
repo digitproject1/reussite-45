@@ -24,6 +24,31 @@ const insforge = createClient({
   anonKey: import.meta.env.VITE_INSFORGE_ANON_KEY || ''
 });
 
+// --- GOOGLE YOUTUBE API HELPER ---
+const YOUTUBE_API_KEY = import.meta.env.VITE_YOUTUBE_API_KEY;
+
+const fetchYouTubeVideos = async (query) => {
+  if (!YOUTUBE_API_KEY) {
+    console.warn("YouTube API Key missing. Using fallback mock data.");
+    return null;
+  }
+  try {
+    const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=5&q=${encodeURIComponent(query)}&type=video&key=${YOUTUBE_API_KEY}`;
+    const response = await fetch(url);
+    const data = await response.json();
+    if (data.error) throw new Error(data.error.message);
+    return data.items.map(item => ({
+      ytId: item.id.videoId,
+      title: item.snippet.title,
+      thumbnail: item.snippet.thumbnails.high.url,
+      duration: '15:00' // YouTube search snippet doesn't include duration, would need contentDetails call
+    }));
+  } catch (err) {
+    console.error("YouTube Fetch Error:", err);
+    return null;
+  }
+};
+
 const App = () => {
   const [user, setUser] = useState(null); // { id, email, name, ... }
   const [view, setView] = useState('explore'); // explore, course, admin, my-learning, auth
@@ -211,38 +236,52 @@ const App = () => {
       setStatus('ready');
       setView('course');
     } else {
-      setTimeout(async () => {
-        const newRoadmap = {
-          title: skill,
-          modules: [
-            { 
-              name: "Phase 1: Initiation", 
-              videos: [
-                { id: 'v1', ytId: 'jS4aFq5dxas', title: `Introduction à : ${skill}`, isFree: true, duration: '12:30' },
-                { id: 'v2', ytId: 'P_m-9E5xYyE', title: "Maîtriser les briques essentielles", isFree: false, duration: '18:45' }
-              ] 
-            },
-            { 
-              name: "Phase 2: Mise en Pratique", 
-              videos: [
-                { id: 'v3', ytId: 'W6NZfCO5SIk', title: "Projet concret étape par étape", isFree: false, duration: '45:00' }
-              ] 
-            }
-          ]
-        };
-        const { data, error } = await insforge.database
-          .from('roadmaps')
-          .insert([newRoadmap])
-          .select()
-          .single();
-        
-        if (data) {
-          setRoadmap(data);
-          setPublicRoadmaps([data, ...publicRoadmaps]);
-        }
-        setStatus('ready');
-        setView('course');
-      }, 1500);
+      // 1. Fetch Real YouTube Data if Key exists
+      const realVideos = await fetchYouTubeVideos(skill);
+      
+      const newRoadmap = {
+        title: skill,
+        modules: [
+          { 
+            name: "Phase 1: Initiation", 
+            videos: realVideos ? realVideos.slice(0, 2).map((v, idx) => ({
+              id: `v1-${idx}`,
+              ytId: v.ytId,
+              title: v.title,
+              isFree: idx === 0,
+              duration: '12:30'
+            })) : [
+              { id: 'v1', ytId: 'jS4aFq5dxas', title: `Introduction à : ${skill}`, isFree: true, duration: '12:30' },
+              { id: 'v2', ytId: 'P_m-9E5xYyE', title: "Maîtriser les briques essentielles", isFree: false, duration: '18:45' }
+            ] 
+          },
+          { 
+            name: "Phase 2: Mise en Pratique", 
+            videos: realVideos ? realVideos.slice(2, 4).map((v, idx) => ({
+              id: `v2-${idx}`,
+              ytId: v.ytId,
+              title: v.title,
+              isFree: false,
+              duration: '45:00'
+            })) : [
+              { id: 'v3', ytId: 'W6NZfCO5SIk', title: "Projet concret étape par étape", isFree: false, duration: '45:00' }
+            ] 
+          }
+        ]
+      };
+
+      const { data, error } = await insforge.database
+        .from('roadmaps')
+        .insert([newRoadmap])
+        .select()
+        .single();
+      
+      if (data) {
+        setRoadmap(data);
+        setPublicRoadmaps([data, ...publicRoadmaps]);
+      }
+      setStatus('ready');
+      setView('course');
     }
   };
 
