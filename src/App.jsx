@@ -21,32 +21,40 @@ function cn(...inputs) {
 // --- CONFIGURATION INSFORGE ---
 const insforge = createClient({
   baseUrl: 'https://5papp5aj.eu-central.insforge.app',
-  anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3OC0xMjM0LTU2NzgtOTBhYi1jZGVmMTIzNDU2NzgiLCJlbWFpbCI6ImFub25AaW5zZm9yZ2UuY29tIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzMzk4MDN9.eiKxDCw7xlam0zPCxY1m5qdJ7TOmKBTHHVpSCQUU0VA'
+  anonKey: import.meta.env.VITE_INSFORGE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3OC0xMjM0LTU2NzgtOTBhYi1jZGVmMTIzNDU2NzgiLCJlbWFpbCI6ImFub25AaW5zZm9yZ2UuY29tIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzNDUwNDR9.HlrQ3klD2Kk0AkfipDR30dw5lVExLni76cS_p3LAL68'
 });
 
 const YOUTUBE_API_KEY = import.meta.env.VITE_YOUTUBE_API_KEY;
 
 const fetchInvidiousVideos = async (query) => {
-  // Liste d'instances Invidious robustes pour une redondance maximale
+  // Liste d'instances Invidious robustes (2024)
   const instances = [
-    'https://yewtu.be/api/v1/search',
-    'https://vid.puffyan.us/api/v1/search',
-    'https://invidious.snopyta.org/api/v1/search',
-    'https://invidious.sethforprivacy.com/api/v1/search'
+    'https://inv.vern.cc/api/v1/search',
+    'https://invidious.projectsegfau.lt/api/v1/search',
+    'https://invidious.namazso.eu/api/v1/search',
+    'https://invidious.tiuxo.com/api/v1/search'
   ];
   
   for (const inst of instances) {
     try {
-      const res = await fetch(`${inst}?q=${encodeURIComponent(query)}&region=FR`);
-      const data = await res.json();
-      if (data && data.length > 0) {
-        return data.slice(0, 3).map(v => ({
-          ytId: v.videoId,
-          title: v.title,
-          thumbnail: v.videoThumbnails?.[0]?.url || ""
-        }));
+      // 🛡️ PROXY CORS BYPASS : allorigins force le passage à travers la sécurité CORS
+      const targetUrl = `${inst}?q=${encodeURIComponent(query)}&region=FR`;
+      const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`;
+      
+      const res = await fetch(proxyUrl);
+      const wrapper = await res.json();
+      
+      if (wrapper.contents) {
+        const data = JSON.parse(wrapper.contents);
+        if (data && data.length > 0) {
+          return data.slice(0, 3).map(v => ({
+            ytId: v.videoId,
+            title: v.title,
+            thumbnail: v.videoThumbnails?.[0]?.url || ""
+          }));
+        }
       }
-    } catch (e) { console.warn(`Instance ${inst} indisponible, passage à la suivante...`); }
+    } catch (e) { console.warn(`Instance ${inst} indisponible via proxy, passage à la suivante...`); }
   }
   return [];
 };
