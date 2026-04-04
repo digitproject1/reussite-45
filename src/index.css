@@ -10,7 +10,7 @@
 }
 
 body {
-  @apply bg-[#020617] text-slate-200 antialiased selection:bg-amber-500/30;
+  @apply bg-slate-950 text-slate-200 antialiased selection:bg-amber-500/30;
   margin: 0;
   min-height: 100vh;
   overflow-x: hidden;
@@ -19,30 +19,38 @@ body {
 /* Elite Design System Utilities */
 @layer components {
   .glass {
-    @apply backdrop-blur-2xl bg-slate-950/80 border border-white/5;
+    @apply backdrop-blur-3xl bg-slate-950/80 border border-white/10;
   }
   
   .glass-card {
-    @apply glass rounded-[3rem] shadow-2xl;
+    @apply glass rounded-[4rem] shadow-2xl;
+  }
+
+  .glass-card-prestige {
+    @apply glass border-white/20 rounded-[5rem] shadow-[0_32px_64px_-12px_rgba(0,0,0,0.5)];
   }
 
   .premium-btn {
-    @apply relative overflow-hidden px-8 py-4 rounded-[2rem] font-black text-lg transition-all active:scale-95;
+    @apply relative overflow-hidden px-8 py-4 rounded-[3rem] font-black text-lg transition-all active:scale-95 hover:scale-105;
   }
 
   .amber-glow {
-    @apply shadow-[0_0_30px_rgba(245,158,11,0.15)] hover:shadow-[0_0_40px_rgba(245,158,11,0.25)];
+    @apply shadow-[0_0_50px_rgba(245,158,11,0.2)] hover:shadow-[0_0_70px_rgba(245,158,11,0.3)];
+  }
+
+  .premium-input {
+    @apply bg-white/5 border border-white/10 rounded-[2.5rem] px-8 py-5 focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition-all;
   }
 }
 
 /* Transitions */
 .page-transition {
-  animation: fadeIn 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: fadeIn 0.6s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; transform: scale(0.98) translateY(15px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
 }
 
 /* Custom Scrollbar */
@@ -58,7 +66,7 @@ body {
   @apply bg-slate-800 rounded-full hover:bg-amber-500/50 transition-colors;
 }
 
-/* Fix for iframes */
+/* Fix for iframes - Prestige Rounding */
 iframe {
-  border-radius: 2.5rem;
+  border-radius: 4rem;
 }
