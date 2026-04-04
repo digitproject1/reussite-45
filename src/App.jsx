@@ -9,7 +9,7 @@ import {
   BarChart3, Wallet, UserX, UserCheck, TrendingUp, 
   Plus, Edit3, Trash2, StickyNote, PlayCircle, Eye,
   Medal, Target, LogIn, LogOut, AlertCircle, Loader2,
-  Chrome
+  Globe
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -106,15 +106,17 @@ const App = () => {
   useEffect(() => {
     if (!user) return;
     const fetchProfile = async () => {
-      const { data } = await insforge.database.from('user_profiles').select('*').eq('id', user.id).maybeSingle();
-      if (data) {
-        setUserProfile(data);
-        if (activeVideo) setUserNotes(data.notes?.[activeVideo.id] || "");
-      } else {
-        const newProfile = { id: user.id, is_admin: false, is_paid: false, notes: {}, completed_videos: [] };
-        const { data: created } = await insforge.database.from('user_profiles').insert([newProfile]).select().single();
-        if (created) setUserProfile(created);
-      }
+      try {
+          const { data } = await insforge.database.from('user_profiles').select('*').eq('id', user.id).maybeSingle();
+          if (data) {
+            setUserProfile(data);
+            if (activeVideo) setUserNotes(data.notes?.[activeVideo.id] || "");
+          } else {
+            const newProfile = { id: user.id, is_admin: false, is_paid: false, notes: {}, completed_videos: [] };
+            const { data: created } = await insforge.database.from('user_profiles').insert([newProfile]).select().single();
+            if (created) setUserProfile(created);
+          }
+      } catch(e) { console.error("Profile fetch error:", e); }
     };
     fetchProfile();
   }, [user, activeVideo]);
@@ -156,9 +158,7 @@ const App = () => {
   const handleSearch = async (e) => {
     e.preventDefault();
     if (!skill.trim()) return;
-    setStatus('thinking');
-    setErrorMsg('');
-    setStep('Chargement de la bibliothèque...');
+    setStatus('thinking'); setErrorMsg(''); setStep('Chargement bibliothèque...');
 
     try {
         const existing = publicRoadmaps.find(r => r.title.toLowerCase() === skill.toLowerCase());
@@ -168,7 +168,7 @@ const App = () => {
         let realVideos = await fetchYouTubeVideos(skill);
         
         if (!realVideos) {
-            console.warn("YouTube API Error. Fallback Active.");
+            console.warn("YouTube API Fallback Active.");
             realVideos = [
                 { ytId: 'jS4aFq5dxas', title: `Cycle Initiation : ${skill}` },
                 { ytId: 'P_m-9E5xYyE', title: "Maîtrise des concepts fondamentaux" },
@@ -196,7 +196,7 @@ const App = () => {
         if (error) throw new Error(error.message);
         if (data) { setRoadmap(data); setPublicRoadmaps(prev => [data, ...prev]); }
         setStatus('ready'); setView('course');
-    } catch (err) { setStatus('error'); setErrorMsg("Échec critique base de données."); }
+    } catch (err) { setStatus('error'); setErrorMsg("Échec synchronisation base de données."); }
   };
 
   const processPayment = async () => {
@@ -229,7 +229,6 @@ const App = () => {
           <div className="flex gap-4">
             {userProfile?.is_admin && <button onClick={() => setView('admin')}><BarChart3 className="w-6 h-6 text-slate-500 hover:text-white" /></button>}
             {user ? <button onClick={handleSignOut}><LogOut className="w-6 h-6 text-slate-500 hover:text-white" /></button> : <button onClick={() => setView('auth')} className="text-[10px] font-black uppercase text-slate-500 border border-white/5 py-2 px-4 rounded-xl">Connexion</button>}
-            {!isSubscriptionActive && <button onClick={() => setShowPaymentModal(true)} className="bg-amber-500 text-slate-950 px-6 py-2 rounded-xl text-[10px] font-black uppercase shadow-2xl shadow-amber-500/20 active:scale-95 transition-all">PRO</button>}
           </div>
         </div>
       </nav>
@@ -259,7 +258,7 @@ const App = () => {
                     <h2 className="text-5xl font-black mb-10 text-white text-center italic tracking-tighter uppercase">{authMode === 'login' ? 'CONNEXION' : 'REJOINDRE'}</h2>
                     <div className="space-y-6">
                         <button onClick={handleGoogleLogin} className="w-full bg-white text-slate-950 py-5 rounded-[2.5rem] font-black flex items-center justify-center gap-4 hover:bg-slate-100 transition-all active:scale-95 shadow-xl">
-                            <Chrome className="w-6 h-6" /> Google Login
+                            <Globe className="w-6 h-6" /> Google Login
                         </button>
                         <div className="flex items-center gap-4 py-2"><div className="flex-1 h-px bg-white/5" /><span className="text-[10px] font-black text-slate-700 uppercase">OU</span><div className="flex-1 h-px bg-white/5" /></div>
                         <form onSubmit={authMode === 'login' ? handleLogin : handleSignup} className="space-y-6">
@@ -270,7 +269,6 @@ const App = () => {
                             <button type="submit" className="w-full bg-amber-500 text-slate-950 py-6 rounded-[2.5rem] font-black uppercase text-xl transition-all hover:bg-amber-400 active:scale-95 shadow-2xl shadow-amber-500/20">Continuer</button>
                         </form>
                     </div>
-                    <button onClick={() => setAuthMode(authMode === 'login' ? 'signup' : 'login')} className="w-full mt-10 text-slate-600 text-[10px] font-black uppercase tracking-widest hover:text-white transition-all">{authMode === 'login' ? 'Pas encore membre ?' : 'Déjà inscrit ?'}</button>
                 </div>
             </div>
         )}
@@ -286,7 +284,7 @@ const App = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-12 pt-20 border-t border-white/5 text-left">
                {publicRoadmaps.map(r => (
                  <div key={r.id} onClick={() => { setRoadmap(r); setView('course'); }} className="bg-slate-900/60 border border-white/5 p-12 rounded-[5rem] group hover:bg-slate-900 hover:border-amber-500/40 transition-all flex items-center justify-between cursor-pointer">
-                   <div className="flex items-center gap-10"><div className="bg-slate-800 p-8 rounded-[2.5rem] group-hover:rotate-12 transition-transform shadow-2xl"><BookOpen className="w-12 h-12 text-amber-500" /></div><div><h4 className="font-black text-4xl capitalize text-white mb-2 leading-none">{r.title}</h4><span className="text-[10px] font-black text-slate-600 uppercase tracking-widest">{r.modules?.length || 0} MODULES ÉLITES</span></div></div>
+                   <div className="flex items-center gap-10"><div className="bg-slate-800 p-8 rounded-[2.5rem] shadow-2xl group-hover:rotate-12 transition-transform"><BookOpen className="w-12 h-12 text-amber-500" /></div><div><h4 className="font-black text-4xl capitalize text-white mb-2 leading-none">{r.title}</h4><span className="text-[10px] font-black text-slate-600 uppercase tracking-widest">{r.modules?.length || 0} MODULES ÉLITES</span></div></div>
                    <ChevronRight className="w-10 h-10 text-slate-700 group-hover:text-amber-500 transition-all" />
                  </div>
                ))}
@@ -296,7 +294,7 @@ const App = () => {
 
         {view === 'course' && roadmap && (
           <div className="grid lg:grid-cols-12 gap-16 animate-in slide-in-from-bottom-20 duration-1000">
-            <div className="lg:col-span-4"><div className="bg-slate-900 border border-white/5 p-14 rounded-[5rem] sticky top-40 shadow-4xl"><p className="text-[10px] font-black text-amber-500 uppercase tracking-widest mb-6 italic">Cycle Expertise Professionnelle</p><h2 className="text-6xl font-black mb-12 text-white italic capitalize leading-[0.9] pr-10">{roadmap.title}</h2><div className="h-6 bg-slate-800 rounded-full p-1.5 border border-white/5"><div className="h-full bg-amber-500 rounded-full transition-all duration-1000 shadow-[0_0_30px_rgba(245,158,11,0.5)]" style={{ width: `${progressPercent}%` }} /></div><p className="text-xs font-black text-slate-600 uppercase mt-8 ml-6">Progression Réussite: {progressPercent}%</p></div></div>
+            <div className="lg:col-span-4"><div className="bg-slate-900 border border-white/5 p-14 rounded-[5rem] sticky top-40 shadow-4xl"><p className="text-[10px] font-black text-amber-500 uppercase tracking-widest mb-6 italic">Cycle Expertise Professionnelle</p><h2 className="text-6xl font-black mb-12 text-white italic capitalize leading-[0.9] pr-10">{roadmap.title}</h2><div className="h-6 bg-slate-800 rounded-full p-1.5 border border-white/5"><div className="h-full bg-amber-500 rounded-full transition-all duration-1000" style={{ width: `${progressPercent}%` }} /></div><p className="text-xs font-black text-slate-600 uppercase mt-8 ml-6">Progression Réussite: {progressPercent}%</p></div></div>
             <div className="lg:col-span-8 space-y-24 pb-60">
                {roadmap.modules.map((m, i) => (
                  <div key={i} className="space-y-14">
@@ -306,10 +304,10 @@ const App = () => {
                        const locked = !v.isFree && !isSubscriptionActive;
                        const completed = userProfile?.completed_videos?.includes(v.id);
                        return (
-                         <div key={v.id} className={cn("p-14 rounded-[5rem] border transition-all flex items-center gap-12 shadow-5xl relative overflow-hidden", locked ? "bg-slate-900/10 opacity-30 cursor-not-allowed border-transparent grayscale" : "bg-slate-900 border-white/5 hover:border-amber-500/50 cursor-pointer")} onClick={() => !locked && setActiveVideo(v)}>
-                           <div className={cn("w-28 h-28 rounded-[3rem] flex items-center justify-center transition-all", completed ? "bg-green-500/10 text-green-500 shadow-[0_0_20px_rgba(34,197,94,0.3)]" : "bg-slate-800 text-amber-500 shadow-3xl")}>{completed ? <CheckCircle2 className="w-14 h-14" /> : (locked ? <Lock className="w-10 h-10 text-slate-700" /> : <PlayCircle className="w-14 h-14" />)}</div>
+                         <div key={v.id} className={cn("p-14 rounded-[5rem] border transition-all flex items-center gap-12 shadow-5xl", locked ? "bg-slate-900/10 opacity-30 cursor-not-allowed border-transparent grayscale" : "bg-slate-900 border-white/5 hover:border-amber-500/50 cursor-pointer")} onClick={() => !locked && setActiveVideo(v)}>
+                           <div className={cn("w-28 h-28 rounded-[3rem] flex items-center justify-center", completed ? "bg-green-500/10 text-green-500 shadow-[0_0_20px_rgba(34,197,94,0.3)]" : "bg-slate-800 text-amber-500 shadow-3xl")}>{completed ? <CheckCircle2 className="w-14 h-14" /> : (locked ? <Lock className="w-10 h-10 text-slate-700" /> : <PlayCircle className="w-14 h-14" />)}</div>
                            <div className="flex-1"><h4 className="font-black text-4xl text-white italic leading-tight mb-4">{v.title}</h4><span className="text-[10px] font-black text-slate-800 uppercase tracking-[0.4em]">Validation du Cycle Professionnelle</span></div>
-                           {!locked && <button onClick={(e) => { e.stopPropagation(); toggleComplete(v.id); }} className={cn("p-8 rounded-full transition-all hover:bg-white/5", completed ? "text-green-500" : "text-slate-800 hover:text-white")}><CheckCircle2 className="w-12 h-12" /></button>}
+                           {!locked && <button onClick={(e) => { e.stopPropagation(); toggleComplete(v.id); }} className={cn("p-8 rounded-full", completed ? "text-green-500" : "text-slate-800 hover:text-white")}><CheckCircle2 className="w-12 h-12" /></button>}
                          </div>
                        );
                      })}
@@ -323,12 +321,12 @@ const App = () => {
 
       {showPaymentModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-950/99 backdrop-blur-3xl animate-in zoom-in duration-500">
-          <div className="bg-slate-900 border border-white/5 rounded-[6rem] w-full max-w-3xl p-24 text-center relative shadow-[0_100px_200px_rgba(0,0,0,1)]">
-            <button onClick={() => setShowPaymentModal(false)} className="absolute top-16 right-16"><X className="w-16 h-16 text-slate-800 hover:text-white transition-all" /></button>
-            <div className="bg-amber-500 w-32 h-32 rounded-[2.5rem] flex items-center justify-center mx-auto mb-16 shadow-2xl shadow-amber-500/40 rotate-12"><Zap className="w-16 h-16 text-slate-950 fill-current" /></div>
+          <div className="bg-slate-900 border border-white/5 rounded-[6rem] w-full max-w-3xl p-24 text-center relative shadow-3xl">
+            <button onClick={() => setShowPaymentModal(false)} className="absolute top-16 right-16"><X className="w-16 h-16 text-slate-800 hover:text-white" /></button>
+            <div className="bg-amber-500 w-32 h-32 rounded-[2.5rem] flex items-center justify-center mx-auto mb-16 shadow-2xl rotate-12"><Zap className="w-16 h-16 text-slate-950 fill-current" /></div>
             <h2 className="text-8xl font-black mb-12 italic text-white uppercase tracking-tighter">REUSSITE<span className="text-amber-500">PRO</span></h2>
-            <div className="bg-slate-950 p-20 rounded-[5rem] mb-20 flex justify-between items-center text-left border border-white/5 shadow-2xl"><div className="text-9xl font-black text-white italic">2000 <span className="text-4xl text-slate-800 uppercase tracking-widest">F</span></div><CreditCard className="w-20 h-20 text-slate-800" /></div>
-            <button onClick={processPayment} className="w-full bg-white text-slate-950 py-12 rounded-[4rem] font-black text-5xl shadow-4xl hover:bg-amber-500 transition-all active:scale-95 uppercase tracking-tighter">ACTIVER L'ACCÈS 45J</button>
+            <div className="bg-slate-950 p-20 rounded-[5rem] mb-20 flex justify-between items-center text-left border border-white/5 shadow-2xl"><div className="text-9xl font-black text-white italic">2000 <span className="text-4xl text-slate-800">F</span></div><CreditCard className="w-20 h-20 text-slate-800" /></div>
+            <button onClick={processPayment} className="w-full bg-white text-slate-950 py-12 rounded-[4rem] font-black text-5xl shadow-4xl hover:bg-amber-500 transition-all">ACTIVER L'ACCÈS 45J</button>
           </div>
         </div>
       )}
@@ -336,10 +334,10 @@ const App = () => {
       {activeVideo && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/99 backdrop-blur-[100px] animate-in fade-in duration-700">
           <div className="w-full max-w-7xl h-full flex flex-col gap-10">
-            <div className="flex justify-between items-center px-10"><h2 className="font-black text-5xl text-white italic truncate pr-40 leading-none">{activeVideo.title}</h2><button onClick={() => setActiveVideo(null)} className="p-10 bg-white/5 rounded-[3rem] hover:bg-white/10 transition-all border border-white/5 shadow-2xl"><X className="w-14 h-14 text-white" /></button></div>
+            <div className="flex justify-between items-center px-10"><h2 className="font-black text-5xl text-white italic truncate pr-40 leading-none">{activeVideo.title}</h2><button onClick={() => setActiveVideo(null)} className="p-10 bg-white/5 rounded-[3rem] border border-white/5 shadow-2xl"><X className="w-14 h-14 text-white" /></button></div>
             <div className="flex-1 grid lg:grid-cols-12 gap-10 px-4">
                <div className="lg:col-span-8 bg-slate-900 rounded-[6rem] overflow-hidden border border-white/5 shadow-4xl relative"><iframe width="100%" height="100%" src={`https://www.youtube.com/embed/${activeVideo.ytId}?autoplay=1&modestbranding=1`} frameBorder="0" allowFullScreen></iframe></div>
-               <div className="lg:col-span-4 bg-slate-900 border border-white/5 rounded-[6rem] flex flex-col p-16 shadow-4xl"><div className="text-[10px] font-black uppercase text-amber-500 mb-12 tracking-[1em] italic opacity-50">Journal d'Expertise Appliquée</div><textarea className="flex-1 bg-transparent text-3xl text-slate-300 resize-none outline-none italic leading-relaxed placeholder:text-slate-900 font-medium" placeholder="Synthétisez les concepts maîtres..." value={userNotes} onChange={(e) => setUserNotes(e.target.value)}></textarea><button onClick={() => toggleComplete(activeVideo.id)} className={cn("mt-12 py-10 rounded-[4rem] font-black text-3xl shadow-5xl transition-all", userProfile?.completed_videos?.includes(activeVideo.id) ? "bg-green-500 text-white" : "bg-white text-slate-950 hover:bg-amber-500")}>{userProfile?.completed_videos?.includes(activeVideo.id) ? "CYCLE ÉLEVÉ ✅" : "VALIDER LE MODULE"}</button></div>
+               <div className="lg:col-span-4 bg-slate-900 border border-white/5 rounded-[6rem] flex flex-col p-16 shadow-4xl"><div className="text-[10px] font-black uppercase text-amber-500 mb-12 tracking-[1em] italic opacity-50">Journal d'Expertise Appliquée</div><textarea className="flex-1 bg-transparent text-3xl text-slate-300 resize-none outline-none italic leading-relaxed placeholder:text-slate-900 font-medium" placeholder="Synthétisez les concepts maîtres..." value={userNotes} onChange={(e) => setUserNotes(e.target.value)}></textarea><button onClick={() => toggleComplete(activeVideo.id)} className={cn("mt-12 py-10 rounded-[4rem] font-black text-3xl shadow-5xl transition-all", userProfile?.completed_videos?.includes(activeVideo.id) ? "bg-green-500 text-white" : "bg-white text-slate-950")}>{userProfile?.completed_videos?.includes(activeVideo.id) ? "CYCLE ÉLEVÉ ✅" : "VALIDER LE MODULE"}</button></div>
             </div>
           </div>
         </div>
