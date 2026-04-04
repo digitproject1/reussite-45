@@ -1,0 +1,64 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&family=Inter:wght@100..900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  font-family: 'Outfit', 'Inter', system-ui, sans-serif;
+  color-scheme: dark;
+}
+
+body {
+  @apply bg-[#020617] text-slate-200 antialiased selection:bg-amber-500/30;
+  margin: 0;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Elite Design System Utilities */
+@layer components {
+  .glass {
+    @apply backdrop-blur-2xl bg-slate-950/80 border border-white/5;
+  }
+  
+  .glass-card {
+    @apply glass rounded-[3rem] shadow-2xl;
+  }
+
+  .premium-btn {
+    @apply relative overflow-hidden px-8 py-4 rounded-[2rem] font-black text-lg transition-all active:scale-95;
+  }
+
+  .amber-glow {
+    @apply shadow-[0_0_30px_rgba(245,158,11,0.15)] hover:shadow-[0_0_40px_rgba(245,158,11,0.25)];
+  }
+}
+
+/* Transitions */
+.page-transition {
+  animation: fadeIn 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-slate-950;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-slate-800 rounded-full hover:bg-amber-500/50 transition-colors;
+}
+
+/* Fix for iframes */
+iframe {
+  border-radius: 2.5rem;
+}
