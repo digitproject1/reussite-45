@@ -183,7 +183,7 @@ const App = () => {
   useEffect(() => {
     const initSessionAndData = async () => {
       // 1. Session Ghost Killer: Purge expired local sessions blocking auth
-      const { data: { session }, error: sessionError } = await insforge.auth.getSession();
+      const { data: { session }, error: sessionError } = await insforge.auth.getCurrentSession();
       if (sessionError) { await insforge.auth.signOut(); setUser(null); }
       else if (session) setUser(session.user);
 
