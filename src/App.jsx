@@ -181,11 +181,26 @@ const App = () => {
   }, [user, activeVideo]);
 
   useEffect(() => {
-    const fetchRoadmaps = async () => {
-      const { data } = await insforge.database.from('roadmaps').select('*').order('created_at', { ascending: false });
-      if (data) setPublicRoadmaps(data);
+    const initSessionAndData = async () => {
+      // 1. Session Ghost Killer: Purge expired local sessions blocking auth
+      const { data: { session }, error: sessionError } = await insforge.auth.getSession();
+      if (sessionError) { await insforge.auth.signOut(); setUser(null); }
+      else if (session) setUser(session.user);
+
+      // 2. Fetch public roadmaps safely
+      const { data, error } = await insforge.database.from('roadmaps').select('*').order('created_at', { ascending: false });
+      
+      // 3. Fallback Purge if 401 happens anyway (Database Layer)
+      if (error && (error.code === '401' || error.message.includes('Auth') || error.message.includes('JWSError'))) {
+         await insforge.auth.signOut();
+         setUser(null);
+         const retry = await insforge.database.from('roadmaps').select('*').order('created_at', { ascending: false });
+         if (retry.data) setPublicRoadmaps(retry.data);
+      } else if (data) {
+         setPublicRoadmaps(data);
+      }
     };
-    fetchRoadmaps();
+    initSessionAndData();
   }, []);
 
   useEffect(() => {
