@@ -26,33 +26,34 @@ const insforge = createClient({
 
 const YOUTUBE_API_KEY = import.meta.env.VITE_YOUTUBE_API_KEY;
 
-const fetchPipedVideos = async (query) => {
-  // Liste d'instances Piped API (100% CORS-friendly) pour contourner le blocage Invidious
-  const instances = [
-    'https://pipedapi.kavin.rocks',
-    'https://pipedapi.syncpundit.io',
-    'https://pipedapi-libre.kavin.rocks'
-  ];
-  
-  for (const inst of instances) {
-    try {
-      const res = await fetch(`${inst}/search?q=${encodeURIComponent(query + ' cours complet tutoriel long')}&filter=all`);
-      if (res.ok) {
-        const data = await res.json();
-        if (data && data.items) {
-          return data.items
-            .filter(v => v.type === 'stream' && v.duration > 240) // only videos > 4min
-            .slice(0, 3)
-            .map(v => ({
-              ytId: v.url.split('?v=')[1],
-              title: v.title,
-              thumbnail: v.thumbnail || ""
-            }));
-        }
+const fetchRapidApiVideos = async (query) => {
+  try {
+    const rapidApiKey = import.meta.env.VITE_RAPIDAPI_KEY;
+    if (!rapidApiKey) throw new Error("Clé RapidAPI manquante");
+
+    const res = await fetch(`https://youtube-media-downloader.p.rapidapi.com/v2/search/videos?keyword=${encodeURIComponent(query + ' cours complet')}&language=fr`, {
+      method: 'GET',
+      headers: {
+        'x-rapidapi-host': 'youtube-media-downloader.p.rapidapi.com',
+        'x-rapidapi-key': rapidApiKey
       }
-    } catch (e) {
-      console.warn(`Instance Piped API ${inst} indisponible, passage à la suivante...`);
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.items) {
+        return data.items
+          .filter(v => !v.isLiveNow)
+          .slice(0, 3)
+          .map(v => ({
+            ytId: v.id,
+            title: v.title,
+            thumbnail: v.thumbnails?.[0]?.url || ""
+          }));
+      }
     }
+  } catch (e) {
+    console.warn(`Instance RapidAPI indisponible, échec de secours.`, e);
   }
   return [];
 };
@@ -70,9 +71,9 @@ const fetchYouTubeVideos = async (query, originalSkill) => {
     let searchData = await searchRes.json();
     
     if (searchData.error || !searchData.items?.length) {
-       // Piped API en secours (sans filtre de durée strict mais avec mots-clés)
-       const pipedResults = await fetchPipedVideos(`${query} cours complet tutoriel long`);
-       if (pipedResults.length > 0) return pipedResults;
+       // RapidAPI en secours absolu
+       const rapidResults = await fetchRapidApiVideos(`${query} cours tutoriel long`);
+       if (rapidResults.length > 0) return rapidResults;
        if (!searchData.error) {
            const fallbackRes = await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=8&q=${encodeURIComponent(query)}&type=video&videoEmbeddable=true&videoDuration=medium&key=${apiKey}`);
            searchData = await fallbackRes.json();
@@ -96,7 +97,7 @@ const fetchYouTubeVideos = async (query, originalSkill) => {
          return skillTokens.some(token => token.length > 2 && title.includes(token)) || title.includes((originalSkill || "").toLowerCase());
       })
       .map(v => ({ ytId: v.id, title: v.snippet.title, thumbnail: v.snippet.thumbnails.high.url }));
-  } catch (err) { return await fetchPipedVideos(query); }
+  } catch (err) { return await fetchRapidApiVideos(query); }
 };
 
 const App = () => {
